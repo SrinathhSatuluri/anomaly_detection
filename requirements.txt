@@ -1,0 +1,24 @@
+# Flask & Web
+flask==3.0.0
+flask-cors==4.0.0
+gunicorn==21.2.0
+
+# Database
+sqlalchemy==2.0.23
+pg8000==1.30.3
+alembic==1.13.1
+
+# Celery & Message Queue
+celery==5.3.4
+kombu==5.3.4
+
+# Utilities
+python-dotenv==1.0.0
+requests==2.31.0
+
+# Data Processing
+numpy==1.26.2
+python-dateutil==2.8.2
+
+# Testing
+pytest==7.4.3
