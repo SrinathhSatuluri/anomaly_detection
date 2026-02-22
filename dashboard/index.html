@@ -1,0 +1,1274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FraudShield - Fraud Detection Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * { font-family: 'Inter', sans-serif; }
+        .sidebar-item:hover { background: rgba(255,255,255,0.1); }
+        .sidebar-item.active { background: rgba(255,255,255,0.15); }
+        .card { background: white; border-radius: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); }
+        .btn-outline { border: 1px solid #E2E8F0; border-radius: 8px; padding: 8px 16px; font-size: 14px; color: #4A6CF7; transition: all 0.2s; }
+        .btn-outline:hover { background: #F8FAFC; border-color: #4A6CF7; }
+        .btn-primary { background: #4A6CF7; color: white; border-radius: 8px; padding: 8px 20px; font-size: 14px; transition: all 0.2s; }
+        .btn-primary:hover { background: #3B5DE7; }
+        .btn-danger { background: #EF4444; color: white; border-radius: 8px; padding: 6px 12px; font-size: 12px; }
+        .btn-success { background: #10B981; color: white; border-radius: 8px; padding: 6px 12px; font-size: 12px; }
+        .btn-warning { background: #F59E0B; color: white; border-radius: 8px; padding: 6px 12px; font-size: 12px; }
+        .status-badge { padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 500; }
+        .status-pending { background: #FEF3C7; color: #D97706; }
+        .status-reviewed { background: #D1FAE5; color: #059669; }
+        .status-dismissed { background: #E5E7EB; color: #6B7280; }
+        .severity-critical { background: #FEE2E2; color: #DC2626; }
+        .severity-high { background: #FED7AA; color: #EA580C; }
+        .severity-medium { background: #FEF3C7; color: #D97706; }
+        .severity-low { background: #DBEAFE; color: #2563EB; }
+        .table-row:hover { background: #F9FAFB; }
+        .input-field { border: 1px solid #E2E8F0; border-radius: 8px; padding: 10px 14px; width: 100%; transition: all 0.2s; }
+        .input-field:focus { outline: none; border-color: #4A6CF7; box-shadow: 0 0 0 3px rgba(74, 108, 247, 0.1); }
+        .loading { opacity: 0.5; pointer-events: none; }
+        .toast { position: fixed; bottom: 20px; right: 20px; padding: 16px 24px; border-radius: 8px; color: white; z-index: 1000; animation: slideIn 0.3s ease; }
+        .toast-success { background: #10B981; }
+        .toast-error { background: #EF4444; }
+        @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        .tab-active { border-bottom: 2px solid #4A6CF7; color: #4A6CF7; }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <div class="flex h-screen">
+        <!-- Sidebar -->
+        <div class="w-64 bg-slate-900 text-white p-6 flex flex-col flex-shrink-0">
+            <div class="flex items-center gap-3 mb-10">
+                <div class="w-10 h-10 bg-indigo-500 rounded-xl flex items-center justify-center">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+                    </svg>
+                </div>
+                <span class="font-semibold text-lg">FraudShield</span>
+            </div>
+
+            <div class="text-xs text-slate-400 mb-4 uppercase tracking-wider">Menu</div>
+
+            <nav class="space-y-2" id="main-nav">
+                <a href="#" class="sidebar-item active flex items-center gap-3 px-4 py-3 rounded-xl" data-page="dashboard">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/>
+                    </svg>
+                    Dashboard
+                </a>
+                <a href="#" class="sidebar-item flex items-center gap-3 px-4 py-3 rounded-xl text-slate-300" data-page="transactions">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+                    </svg>
+                    Transactions
+                </a>
+                <a href="#" class="sidebar-item flex items-center gap-3 px-4 py-3 rounded-xl text-slate-300" data-page="alerts">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
+                    </svg>
+                    Alerts
+                    <span id="alert-badge" class="ml-auto bg-red-500 text-white text-xs px-2 py-0.5 rounded-full hidden">0</span>
+                </a>
+                <a href="#" class="sidebar-item flex items-center gap-3 px-4 py-3 rounded-xl text-slate-300" data-page="ml-insights">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+                    </svg>
+                    ML Insights
+                </a>
+                <a href="#" class="sidebar-item flex items-center gap-3 px-4 py-3 rounded-xl text-slate-300" data-page="test">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                    </svg>
+                    Test Transaction
+                </a>
+                <a href="#" class="sidebar-item flex items-center gap-3 px-4 py-3 rounded-xl text-slate-300" data-page="receipts">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                    </svg>
+                    Receipt OCR
+                </a>
+            </nav>
+
+            <div class="text-xs text-slate-400 mb-4 mt-8 uppercase tracking-wider">System</div>
+
+            <nav class="space-y-2">
+                <a href="#" class="sidebar-item flex items-center gap-3 px-4 py-3 rounded-xl text-slate-300" onclick="refreshAllData()">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                    </svg>
+                    Refresh Data
+                </a>
+            </nav>
+
+            <div class="mt-auto">
+                <div class="bg-slate-800 rounded-xl p-4">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 bg-indigo-500 rounded-full flex items-center justify-center text-sm font-medium">SS</div>
+                        <div>
+                            <div class="font-medium text-sm">Srinath S.</div>
+                            <div class="text-xs text-slate-400">Admin</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="flex-1 overflow-auto">
+            <!-- Header -->
+            <div class="bg-white border-b border-gray-100 px-8 py-4 flex items-center justify-between sticky top-0 z-10">
+                <div class="relative">
+                    <input type="text" id="global-search" placeholder="Search transactions, users..." class="bg-gray-50 border-0 rounded-xl px-4 py-2 pl-10 w-80 focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                    <svg class="w-5 h-5 text-gray-400 absolute left-3 top-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                    </svg>
+                </div>
+                <div class="flex items-center gap-4">
+                    <div id="api-status" class="flex items-center gap-2 text-sm">
+                        <span class="w-2 h-2 bg-green-500 rounded-full"></span>
+                        <span class="text-gray-500">API Connected</span>
+                    </div>
+                    <div class="text-sm text-gray-400" id="last-updated">Updated just now</div>
+                </div>
+            </div>
+
+            <!-- Page: Dashboard -->
+            <div id="page-dashboard" class="p-8">
+                <div class="flex justify-between items-center mb-6">
+                    <h1 class="text-2xl font-semibold text-gray-900">Dashboard</h1>
+                    <div class="flex gap-2">
+                        <button onclick="refreshAllData()" class="btn-outline flex items-center gap-2">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                            </svg>
+                            Refresh
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Stats Cards -->
+                <div class="grid grid-cols-4 gap-6 mb-6">
+                    <div class="card p-6">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-gray-500 text-sm">Total Transactions</p>
+                                <p class="text-3xl font-bold text-gray-900 mt-1" id="stat-total-txn">-</p>
+                                <p class="text-sm mt-1">
+                                    <span id="stat-total-change" class="text-green-500">↑ 0%</span>
+                                    <span class="text-gray-400">vs last week</span>
+                                </p>
+                            </div>
+                            <div class="w-12 h-12 bg-indigo-100 rounded-xl flex items-center justify-center">
+                                <svg class="w-6 h-6 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+                                </svg>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card p-6">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-gray-500 text-sm">Flagged</p>
+                                <p class="text-3xl font-bold text-gray-900 mt-1" id="stat-flagged">-</p>
+                                <p class="text-sm mt-1">
+                                    <span id="stat-flagged-change" class="text-red-500">↑ 0%</span>
+                                    <span class="text-gray-400">vs last week</span>
+                                </p>
+                            </div>
+                            <div class="w-12 h-12 bg-red-100 rounded-xl flex items-center justify-center">
+                                <svg class="w-6 h-6 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                                </svg>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card p-6">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-gray-500 text-sm">Avg Risk Score</p>
+                                <p class="text-3xl font-bold text-gray-900 mt-1" id="stat-avg-score">-</p>
+                                <p class="text-sm mt-1 text-gray-400">Last 7 days</p>
+                            </div>
+                            <div class="w-12 h-12 bg-yellow-100 rounded-xl flex items-center justify-center">
+                                <svg class="w-6 h-6 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/>
+                                </svg>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card p-6">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-gray-500 text-sm">Pending Alerts</p>
+                                <p class="text-3xl font-bold text-gray-900 mt-1" id="stat-pending-alerts">-</p>
+                                <p class="text-sm mt-1 text-gray-400">Needs review</p>
+                            </div>
+                            <div class="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center">
+                                <svg class="w-6 h-6 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
+                                </svg>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Charts Row -->
+                <div class="grid grid-cols-3 gap-6 mb-6">
+                    <div class="card p-6 col-span-2">
+                        <div class="flex justify-between items-start mb-4">
+                            <div>
+                                <h3 class="font-semibold text-gray-900">Transaction Volume</h3>
+                                <p class="text-gray-400 text-sm">Last 7 days</p>
+                            </div>
+                            <button class="btn-outline text-sm">View Report</button>
+                        </div>
+                        <canvas id="chart-transactions" height="120"></canvas>
+                    </div>
+
+                    <div class="card p-6">
+                        <div class="flex justify-between items-start mb-4">
+                            <div>
+                                <h3 class="font-semibold text-gray-900">Risk Distribution</h3>
+                                <p class="text-gray-400 text-sm">Current status</p>
+                            </div>
+                        </div>
+                        <canvas id="chart-risk" height="160"></canvas>
+                        <div class="flex justify-center gap-4 mt-4">
+                            <div class="flex items-center gap-2">
+                                <span class="w-3 h-3 bg-green-400 rounded-full"></span>
+                                <span class="text-xs text-gray-500">Low</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <span class="w-3 h-3 bg-yellow-400 rounded-full"></span>
+                                <span class="text-xs text-gray-500">Medium</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <span class="w-3 h-3 bg-red-400 rounded-full"></span>
+                                <span class="text-xs text-gray-500">High</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Bottom Row -->
+                <div class="grid grid-cols-3 gap-6">
+                    <!-- Model Health -->
+                    <div class="card p-6">
+                        <h3 class="font-semibold text-gray-900 mb-1">Model Health</h3>
+                        <p class="text-gray-400 text-sm mb-4">ML system status</p>
+                        <div id="model-health-content" class="space-y-3">
+                            <div class="animate-pulse bg-gray-100 h-4 rounded"></div>
+                            <div class="animate-pulse bg-gray-100 h-4 rounded w-3/4"></div>
+                        </div>
+                    </div>
+
+                    <!-- Recent Alerts -->
+                    <div class="card p-6">
+                        <div class="flex justify-between items-start mb-4">
+                            <div>
+                                <h3 class="font-semibold text-gray-900">Recent Alerts</h3>
+                                <p class="text-gray-400 text-sm">Latest flagged activity</p>
+                            </div>
+                            <button onclick="showPage('alerts')" class="btn-outline text-sm">View All</button>
+                        </div>
+                        <div id="recent-alerts-list" class="space-y-3">
+                            <div class="animate-pulse bg-gray-100 h-12 rounded"></div>
+                            <div class="animate-pulse bg-gray-100 h-12 rounded"></div>
+                        </div>
+                    </div>
+
+                    <!-- Top Risk Factors -->
+                    <div class="card p-6">
+                        <h3 class="font-semibold text-gray-900 mb-1">Top Risk Factors</h3>
+                        <p class="text-gray-400 text-sm mb-4">Common triggers</p>
+                        <div id="risk-factors-list" class="space-y-3">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 bg-red-100 rounded-xl flex items-center justify-center text-lg">💰</div>
+                                <div class="flex-1">
+                                    <div class="font-medium text-sm">High Amount</div>
+                                    <div class="text-gray-400 text-xs">Unusual spending</div>
+                                </div>
+                                <div class="text-sm font-medium text-gray-600">45%</div>
+                            </div>
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 bg-yellow-100 rounded-xl flex items-center justify-center text-lg">🏪</div>
+                                <div class="flex-1">
+                                    <div class="font-medium text-sm">New Vendor</div>
+                                    <div class="text-gray-400 text-xs">First-time merchant</div>
+                                </div>
+                                <div class="text-sm font-medium text-gray-600">32%</div>
+                            </div>
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center text-lg">🌙</div>
+                                <div class="flex-1">
+                                    <div class="font-medium text-sm">Late Night</div>
+                                    <div class="text-gray-400 text-xs">Off-hours activity</div>
+                                </div>
+                                <div class="text-sm font-medium text-gray-600">18%</div>
+                            </div>
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 bg-purple-100 rounded-xl flex items-center justify-center text-lg">⚡</div>
+                                <div class="flex-1">
+                                    <div class="font-medium text-sm">High Velocity</div>
+                                    <div class="text-gray-400 text-xs">Rapid transactions</div>
+                                </div>
+                                <div class="text-sm font-medium text-gray-600">5%</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Page: Transactions -->
+            <div id="page-transactions" class="p-8 hidden">
+                <div class="flex justify-between items-center mb-6">
+                    <h1 class="text-2xl font-semibold text-gray-900">Transactions</h1>
+                    <button onclick="loadTransactions()" class="btn-outline flex items-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                        </svg>
+                        Refresh
+                    </button>
+                </div>
+
+                <!-- Filters -->
+                <div class="card p-4 mb-6">
+                    <div class="flex gap-4 items-end">
+                        <div class="flex-1">
+                            <label class="block text-sm text-gray-500 mb-1">User ID</label>
+                            <input type="text" id="filter-user" placeholder="e.g., user_eng_001" class="input-field">
+                        </div>
+                        <div class="w-40">
+                            <label class="block text-sm text-gray-500 mb-1">Min Score</label>
+                            <input type="number" id="filter-min-score" placeholder="0" class="input-field">
+                        </div>
+                        <div class="w-40">
+                            <label class="flex items-center gap-2 mb-1 text-sm text-gray-500">
+                                <input type="checkbox" id="filter-flagged" class="rounded">
+                                Flagged Only
+                            </label>
+                        </div>
+                        <button onclick="loadTransactions()" class="btn-primary">Apply Filters</button>
+                    </div>
+                </div>
+
+                <!-- Transactions Table -->
+                <div class="card overflow-hidden">
+                    <table class="w-full">
+                        <thead class="bg-gray-50 border-b border-gray-100">
+                            <tr>
+                                <th class="text-left py-3 px-4 text-sm font-medium text-gray-500">Transaction ID</th>
+                                <th class="text-left py-3 px-4 text-sm font-medium text-gray-500">User</th>
+                                <th class="text-left py-3 px-4 text-sm font-medium text-gray-500">Merchant</th>
+                                <th class="text-right py-3 px-4 text-sm font-medium text-gray-500">Amount</th>
+                                <th class="text-center py-3 px-4 text-sm font-medium text-gray-500">Risk Score</th>
+                                <th class="text-center py-3 px-4 text-sm font-medium text-gray-500">Status</th>
+                                <th class="text-left py-3 px-4 text-sm font-medium text-gray-500">Date</th>
+                            </tr>
+                        </thead>
+                        <tbody id="transactions-table-body">
+                            <tr><td colspan="7" class="py-8 text-center text-gray-400">Loading...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Page: Alerts -->
+            <div id="page-alerts" class="p-8 hidden">
+                <div class="flex justify-between items-center mb-6">
+                    <h1 class="text-2xl font-semibold text-gray-900">Alerts</h1>
+                    <div class="flex gap-2">
+                        <select id="alert-filter-status" onchange="loadAlerts()" class="input-field w-40">
+                            <option value="">All Status</option>
+                            <option value="pending">Pending</option>
+                            <option value="reviewed">Reviewed</option>
+                            <option value="dismissed">Dismissed</option>
+                        </select>
+                        <select id="alert-filter-severity" onchange="loadAlerts()" class="input-field w-40">
+                            <option value="">All Severity</option>
+                            <option value="critical">Critical</option>
+                            <option value="high">High</option>
+                            <option value="medium">Medium</option>
+                            <option value="low">Low</option>
+                        </select>
+                        <button onclick="loadAlerts()" class="btn-outline">Refresh</button>
+                    </div>
+                </div>
+
+                <!-- Alerts List -->
+                <div id="alerts-list" class="space-y-4">
+                    <div class="card p-6 animate-pulse">
+                        <div class="h-4 bg-gray-100 rounded w-1/4 mb-2"></div>
+                        <div class="h-4 bg-gray-100 rounded w-3/4"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Page: ML Insights -->
+            <div id="page-ml-insights" class="p-8 hidden">
+                <div class="flex justify-between items-center mb-6">
+                    <h1 class="text-2xl font-semibold text-gray-900">ML Insights</h1>
+                    <button onclick="loadMLInsights()" class="btn-outline">Refresh</button>
+                </div>
+
+                <div class="grid grid-cols-2 gap-6 mb-6">
+                    <!-- Feature Importance -->
+                    <div class="card p-6">
+                        <h3 class="font-semibold text-gray-900 mb-4">Feature Importance</h3>
+                        <canvas id="chart-features" height="300"></canvas>
+                    </div>
+
+                    <!-- Model Info -->
+                    <div class="card p-6">
+                        <h3 class="font-semibold text-gray-900 mb-4">Model Information</h3>
+                        <div id="ml-model-info" class="space-y-3">
+                            <div class="animate-pulse bg-gray-100 h-4 rounded"></div>
+                        </div>
+
+                        <h3 class="font-semibold text-gray-900 mb-4 mt-8">Drift Detection</h3>
+                        <div id="ml-drift-info" class="space-y-3">
+                            <div class="animate-pulse bg-gray-100 h-4 rounded"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Monitoring Stats -->
+                <div class="card p-6">
+                    <h3 class="font-semibold text-gray-900 mb-4">Monitoring Stats (Last 24h)</h3>
+                    <div id="ml-monitoring-stats" class="grid grid-cols-4 gap-4">
+                        <div class="bg-gray-50 rounded-xl p-4">
+                            <div class="text-gray-500 text-sm">Total Predictions</div>
+                            <div class="text-2xl font-bold" id="ml-stat-predictions">-</div>
+                        </div>
+                        <div class="bg-gray-50 rounded-xl p-4">
+                            <div class="text-gray-500 text-sm">Flag Rate</div>
+                            <div class="text-2xl font-bold" id="ml-stat-flag-rate">-</div>
+                        </div>
+                        <div class="bg-gray-50 rounded-xl p-4">
+                            <div class="text-gray-500 text-sm">Avg Ensemble Score</div>
+                            <div class="text-2xl font-bold" id="ml-stat-ensemble">-</div>
+                        </div>
+                        <div class="bg-gray-50 rounded-xl p-4">
+                            <div class="text-gray-500 text-sm">P99 Score</div>
+                            <div class="text-2xl font-bold" id="ml-stat-p99">-</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Page: Test Transaction -->
+            <div id="page-test" class="p-8 hidden">
+                <h1 class="text-2xl font-semibold text-gray-900 mb-6">Test Transaction</h1>
+
+                <div class="grid grid-cols-2 gap-6">
+                    <!-- Form -->
+                    <div class="card p-6">
+                        <h3 class="font-semibold text-gray-900 mb-4">Transaction Details</h3>
+
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-sm text-gray-500 mb-1">Amount ($)</label>
+                                <input type="number" id="test-amount" value="500" step="0.01" class="input-field">
+                            </div>
+
+                            <div>
+                                <label class="block text-sm text-gray-500 mb-1">User ID</label>
+                                <select id="test-user" class="input-field">
+                                    <option value="user_eng_001">user_eng_001 (Engineering)</option>
+                                    <option value="user_eng_002">user_eng_002 (Engineering)</option>
+                                    <option value="user_sales_001">user_sales_001 (Sales)</option>
+                                    <option value="user_exec_001">user_exec_001 (Executive)</option>
+                                </select>
+                            </div>
+
+                            <div>
+                                <label class="block text-sm text-gray-500 mb-1">Merchant Name</label>
+                                <input type="text" id="test-merchant" value="Test Merchant" class="input-field">
+                            </div>
+
+                            <div>
+                                <label class="block text-sm text-gray-500 mb-1">Category (MCC)</label>
+                                <select id="test-mcc" class="input-field">
+                                    <option value="5812">5812 - Restaurants</option>
+                                    <option value="5814">5814 - Fast Food</option>
+                                    <option value="5999">5999 - Miscellaneous</option>
+                                    <option value="7011">7011 - Hotels</option>
+                                    <option value="5944">5944 - Jewelry (High Risk)</option>
+                                    <option value="7995">7995 - Gambling (High Risk)</option>
+                                </select>
+                            </div>
+
+                            <div>
+                                <label class="block text-sm text-gray-500 mb-1">Department</label>
+                                <select id="test-department" class="input-field">
+                                    <option value="">None</option>
+                                    <option value="Engineering">Engineering</option>
+                                    <option value="Sales">Sales</option>
+                                    <option value="Executive">Executive</option>
+                                    <option value="Marketing">Marketing</option>
+                                </select>
+                            </div>
+
+                            <div>
+                                <label class="block text-sm text-gray-500 mb-2">Transaction Time</label>
+                                <div class="flex gap-2">
+                                    <button onclick="setTestTime('now')" class="btn-outline flex-1" id="time-now">Now</button>
+                                    <button onclick="setTestTime('late')" class="btn-outline flex-1" id="time-late">Late Night (3AM)</button>
+                                    <button onclick="setTestTime('weekend')" class="btn-outline flex-1" id="time-weekend">Weekend</button>
+                                </div>
+                            </div>
+
+                            <button onclick="submitTestTransaction()" class="btn-primary w-full py-3 text-base mt-4">
+                                🚀 Submit Transaction
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Result -->
+                    <div class="card p-6">
+                        <h3 class="font-semibold text-gray-900 mb-4">Result</h3>
+                        <div id="test-result" class="text-gray-400 text-center py-12">
+                            Submit a transaction to see results
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Page: Receipt OCR -->
+            <div id="page-receipts" class="p-8 hidden">
+                <h1 class="text-2xl font-semibold text-gray-900 mb-6">Receipt Verification</h1>
+
+                <div class="grid grid-cols-2 gap-6">
+                    <!-- Upload Form -->
+                    <div class="card p-6">
+                        <h3 class="font-semibold text-gray-900 mb-4">Upload Receipt</h3>
+
+                        <div id="ocr-status" class="mb-4 p-3 rounded-lg bg-gray-50 text-sm">
+                            Checking OCR status...
+                        </div>
+
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-sm text-gray-500 mb-1">Receipt Image</label>
+                                <input type="file" id="receipt-file" accept="image/*" class="input-field">
+                            </div>
+
+                            <div>
+                                <label class="block text-sm text-gray-500 mb-1">Claimed Amount ($)</label>
+                                <input type="number" id="receipt-amount" step="0.01" placeholder="Enter claimed amount" class="input-field">
+                            </div>
+
+                            <div>
+                                <label class="block text-sm text-gray-500 mb-1">Claimed Merchant (Optional)</label>
+                                <input type="text" id="receipt-merchant" placeholder="Enter merchant name" class="input-field">
+                            </div>
+
+                            <button onclick="verifyReceipt()" class="btn-primary w-full py-3">
+                                🔍 Verify Receipt
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Result -->
+                    <div class="card p-6">
+                        <h3 class="font-semibold text-gray-900 mb-4">Verification Result</h3>
+                        <div id="receipt-result" class="text-gray-400 text-center py-12">
+                            Upload a receipt to verify
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div id="toast-container"></div>
+
+    <script>
+        const API_BASE = 'http://127.0.0.1:5000/api/webhooks';
+        let charts = {};
+        let testTimeMode = 'now';
+
+        // Navigation
+        document.querySelectorAll('#main-nav a').forEach(link => {
+            link.addEventListener('click', (e) => {
+                e.preventDefault();
+                const page = link.dataset.page;
+                showPage(page);
+            });
+        });
+
+        function showPage(page) {
+            // Hide all pages
+            document.querySelectorAll('[id^="page-"]').forEach(p => p.classList.add('hidden'));
+            document.getElementById('page-' + page).classList.remove('hidden');
+
+            // Update nav
+            document.querySelectorAll('#main-nav a').forEach(item => {
+                item.classList.remove('active');
+                item.classList.add('text-slate-300');
+            });
+            const activeLink = document.querySelector(`#main-nav a[data-page="${page}"]`);
+            if (activeLink) {
+                activeLink.classList.add('active');
+                activeLink.classList.remove('text-slate-300');
+            }
+
+            // Load page data
+            switch(page) {
+                case 'dashboard': loadDashboard(); break;
+                case 'transactions': loadTransactions(); break;
+                case 'alerts': loadAlerts(); break;
+                case 'ml-insights': loadMLInsights(); break;
+                case 'receipts': checkOCRStatus(); break;
+            }
+        }
+
+        // API Helpers
+        async function apiGet(endpoint) {
+            try {
+                const response = await fetch(`${API_BASE}/${endpoint}`);
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                return await response.json();
+            } catch (e) {
+                console.error('API Error:', e);
+                updateAPIStatus(false);
+                return null;
+            }
+        }
+
+        async function apiPost(endpoint, data) {
+            try {
+                const response = await fetch(`${API_BASE}/${endpoint}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                return await response.json();
+            } catch (e) {
+                console.error('API Error:', e);
+                return { error: e.message };
+            }
+        }
+
+        async function apiPut(endpoint, data) {
+            try {
+                const response = await fetch(`${API_BASE}/${endpoint}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                return await response.json();
+            } catch (e) {
+                console.error('API Error:', e);
+                return { error: e.message };
+            }
+        }
+
+        function updateAPIStatus(connected) {
+            const el = document.getElementById('api-status');
+            if (connected) {
+                el.innerHTML = '<span class="w-2 h-2 bg-green-500 rounded-full"></span><span class="text-gray-500">API Connected</span>';
+            } else {
+                el.innerHTML = '<span class="w-2 h-2 bg-red-500 rounded-full"></span><span class="text-red-500">API Disconnected</span>';
+            }
+        }
+
+        function updateLastUpdated() {
+            document.getElementById('last-updated').textContent = 'Updated ' + new Date().toLocaleTimeString();
+        }
+
+        function showToast(message, type = 'success') {
+            const toast = document.createElement('div');
+            toast.className = `toast toast-${type}`;
+            toast.textContent = message;
+            document.getElementById('toast-container').appendChild(toast);
+            setTimeout(() => toast.remove(), 3000);
+        }
+
+        // Dashboard
+        async function loadDashboard() {
+            const [summary, mlStatus, alerts, monitoringStats] = await Promise.all([
+                apiGet('stats/summary'),
+                apiGet('ml/status'),
+                apiGet('alerts?limit=5&status=pending'),
+                apiGet('ml/monitoring/stats?hours=24')
+            ]);
+
+            if (summary) {
+                updateAPIStatus(true);
+                document.getElementById('stat-total-txn').textContent = summary.total_transactions_7d || 0;
+                document.getElementById('stat-flagged').textContent = summary.flagged_7d || 0;
+                document.getElementById('stat-avg-score').textContent = (summary.avg_risk_score || 0).toFixed(1);
+                document.getElementById('stat-pending-alerts').textContent = summary.pending_alerts || 0;
+
+                const txnChange = summary.txn_change_pct || 0;
+                const flaggedChange = summary.flagged_change_pct || 0;
+
+                document.getElementById('stat-total-change').innerHTML =
+                    `<span class="${txnChange >= 0 ? 'text-green-500' : 'text-red-500'}">${txnChange >= 0 ? '↑' : '↓'} ${Math.abs(txnChange).toFixed(1)}%</span>`;
+                document.getElementById('stat-flagged-change').innerHTML =
+                    `<span class="${flaggedChange >= 0 ? 'text-red-500' : 'text-green-500'}">${flaggedChange >= 0 ? '↑' : '↓'} ${Math.abs(flaggedChange).toFixed(1)}%</span>`;
+
+                // Update alert badge
+                const badge = document.getElementById('alert-badge');
+                if (summary.pending_alerts > 0) {
+                    badge.textContent = summary.pending_alerts;
+                    badge.classList.remove('hidden');
+                } else {
+                    badge.classList.add('hidden');
+                }
+
+                // Transaction chart
+                if (summary.daily_breakdown) {
+                    updateTransactionChart(summary.daily_breakdown);
+                }
+            }
+
+            if (mlStatus) {
+                const healthHtml = `
+                    <div class="flex justify-between py-2 border-b border-gray-100">
+                        <span class="text-gray-500">Status</span>
+                        <span class="${mlStatus.model_loaded ? 'text-green-500' : 'text-red-500'} font-medium">
+                            ${mlStatus.model_loaded ? '● Active' : '○ Inactive'}
+                        </span>
+                    </div>
+                    <div class="flex justify-between py-2 border-b border-gray-100">
+                        <span class="text-gray-500">Version</span>
+                        <span class="font-medium">${(mlStatus.version || 'N/A').substring(0, 12)}</span>
+                    </div>
+                    <div class="flex justify-between py-2 border-b border-gray-100">
+                        <span class="text-gray-500">Primary Model</span>
+                        <span class="font-medium">${mlStatus.primary_model || 'N/A'}</span>
+                    </div>
+                    <div class="flex justify-between py-2">
+                        <span class="text-gray-500">Features</span>
+                        <span class="font-medium">${mlStatus.feature_count || 0}</span>
+                    </div>
+                `;
+                document.getElementById('model-health-content').innerHTML = healthHtml;
+            }
+
+            if (alerts && alerts.alerts) {
+                const alertsHtml = alerts.alerts.slice(0, 4).map(alert => `
+                    <div class="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50">
+                        <div class="w-2 h-2 rounded-full ${getSeverityColor(alert.severity)}"></div>
+                        <div class="flex-1 min-w-0">
+                            <div class="text-sm font-medium truncate">${alert.alert_type}</div>
+                            <div class="text-xs text-gray-400 truncate">${alert.description?.substring(0, 40)}...</div>
+                        </div>
+                        <span class="status-badge status-${alert.status}">${alert.status}</span>
+                    </div>
+                `).join('') || '<p class="text-gray-400 text-sm">No pending alerts</p>';
+                document.getElementById('recent-alerts-list').innerHTML = alertsHtml;
+            }
+
+            // Risk distribution chart
+            if (monitoringStats) {
+                const total = monitoringStats.total_predictions || 1;
+                const flagged = monitoringStats.flagged_count || 0;
+                updateRiskChart(total - flagged, Math.floor(flagged * 0.6), Math.ceil(flagged * 0.4));
+            }
+
+            updateLastUpdated();
+        }
+
+        function getSeverityColor(severity) {
+            switch(severity) {
+                case 'critical': return 'bg-red-500';
+                case 'high': return 'bg-orange-500';
+                case 'medium': return 'bg-yellow-500';
+                default: return 'bg-blue-500';
+            }
+        }
+
+        function updateTransactionChart(data) {
+            const ctx = document.getElementById('chart-transactions');
+            if (charts.transactions) charts.transactions.destroy();
+
+            charts.transactions = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: data.map(d => d.day),
+                    datasets: [
+                        {
+                            label: 'Transactions',
+                            data: data.map(d => d.transactions),
+                            backgroundColor: '#6366f1',
+                            borderRadius: 6
+                        },
+                        {
+                            label: 'Flagged',
+                            data: data.map(d => d.flagged),
+                            backgroundColor: '#f87171',
+                            borderRadius: 6
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    plugins: { legend: { position: 'bottom' } },
+                    scales: { y: { beginAtZero: true }, x: { grid: { display: false } } }
+                }
+            });
+        }
+
+        function updateRiskChart(low, medium, high) {
+            const ctx = document.getElementById('chart-risk');
+            if (charts.risk) charts.risk.destroy();
+
+            charts.risk = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Low Risk', 'Medium Risk', 'High Risk'],
+                    datasets: [{
+                        data: [low, medium, high],
+                        backgroundColor: ['#4ade80', '#facc15', '#f87171'],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    cutout: '65%',
+                    plugins: { legend: { display: false } }
+                }
+            });
+        }
+
+        // Transactions
+        async function loadTransactions() {
+            const userId = document.getElementById('filter-user').value;
+            const minScore = document.getElementById('filter-min-score').value;
+            const flaggedOnly = document.getElementById('filter-flagged').checked;
+
+            let url = 'transactions?limit=50';
+            if (userId) url += `&user_id=${userId}`;
+            if (minScore) url += `&min_score=${minScore}`;
+            if (flaggedOnly) url += '&flagged=true';
+
+            const data = await apiGet(url);
+
+            if (data && data.transactions) {
+                const tbody = document.getElementById('transactions-table-body');
+
+                if (data.transactions.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="7" class="py-8 text-center text-gray-400">No transactions found</td></tr>';
+                    return;
+                }
+
+                tbody.innerHTML = data.transactions.map(txn => `
+                    <tr class="table-row border-b border-gray-50">
+                        <td class="py-3 px-4 text-sm font-mono text-gray-600">${(txn.ramp_transaction_id || txn.id || '').substring(0, 12)}...</td>
+                        <td class="py-3 px-4 text-sm">${txn.user_id || '-'}</td>
+                        <td class="py-3 px-4 text-sm">${txn.merchant_name || '-'}</td>
+                        <td class="py-3 px-4 text-sm text-right font-medium">$${(txn.amount || 0).toFixed(2)}</td>
+                        <td class="py-3 px-4 text-center">
+                            <span class="inline-block px-2 py-1 rounded text-xs font-medium ${getScoreColor(txn.anomaly_score)}">
+                                ${(txn.anomaly_score || 0).toFixed(1)}
+                            </span>
+                        </td>
+                        <td class="py-3 px-4 text-center">
+                            ${txn.is_flagged ?
+                                '<span class="status-badge severity-high">Flagged</span>' :
+                                '<span class="status-badge bg-green-100 text-green-600">OK</span>'}
+                        </td>
+                        <td class="py-3 px-4 text-sm text-gray-400">${formatDate(txn.created_at)}</td>
+                    </tr>
+                `).join('');
+            }
+        }
+
+        function getScoreColor(score) {
+            if (score >= 70) return 'bg-red-100 text-red-600';
+            if (score >= 40) return 'bg-yellow-100 text-yellow-600';
+            return 'bg-green-100 text-green-600';
+        }
+
+        function formatDate(dateStr) {
+            if (!dateStr) return '-';
+            const date = new Date(dateStr);
+            return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        }
+
+        // Alerts
+        async function loadAlerts() {
+            const status = document.getElementById('alert-filter-status').value;
+            const severity = document.getElementById('alert-filter-severity').value;
+
+            let url = 'alerts?limit=50';
+            if (status) url += `&status=${status}`;
+            if (severity) url += `&severity=${severity}`;
+
+            const data = await apiGet(url);
+
+            if (data && data.alerts) {
+                const container = document.getElementById('alerts-list');
+
+                if (data.alerts.length === 0) {
+                    container.innerHTML = '<div class="card p-6 text-center text-gray-400">No alerts found</div>';
+                    return;
+                }
+
+                container.innerHTML = data.alerts.map(alert => `
+                    <div class="card p-4">
+                        <div class="flex items-start justify-between">
+                            <div class="flex items-start gap-4">
+                                <div class="w-10 h-10 rounded-xl flex items-center justify-center ${getSeverityBg(alert.severity)}">
+                                    ${getSeverityIcon(alert.severity)}
+                                </div>
+                                <div>
+                                    <div class="flex items-center gap-2 mb-1">
+                                        <span class="font-medium">${alert.alert_type}</span>
+                                        <span class="status-badge severity-${alert.severity}">${alert.severity}</span>
+                                        <span class="status-badge status-${alert.status}">${alert.status}</span>
+                                    </div>
+                                    <p class="text-sm text-gray-600 mb-2">${alert.description || 'No description'}</p>
+                                    <p class="text-xs text-gray-400">${formatDate(alert.created_at)} • Score: ${alert.score}</p>
+                                </div>
+                            </div>
+                            <div class="flex gap-2">
+                                ${alert.status === 'pending' ? `
+                                    <button onclick="updateAlertStatus('${alert.id}', 'reviewed')" class="btn-success">Mark Reviewed</button>
+                                    <button onclick="updateAlertStatus('${alert.id}', 'dismissed')" class="btn-outline text-sm">Dismiss</button>
+                                ` : ''}
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+            }
+        }
+
+        function getSeverityBg(severity) {
+            switch(severity) {
+                case 'critical': return 'bg-red-100';
+                case 'high': return 'bg-orange-100';
+                case 'medium': return 'bg-yellow-100';
+                default: return 'bg-blue-100';
+            }
+        }
+
+        function getSeverityIcon(severity) {
+            const color = severity === 'critical' ? 'text-red-500' : severity === 'high' ? 'text-orange-500' : severity === 'medium' ? 'text-yellow-500' : 'text-blue-500';
+            return `<svg class="w-5 h-5 ${color}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+            </svg>`;
+        }
+
+        async function updateAlertStatus(alertId, newStatus) {
+            const result = await apiPut(`alerts/${alertId}/status`, { status: newStatus });
+            if (result && !result.error) {
+                showToast(`Alert marked as ${newStatus}`);
+                loadAlerts();
+                loadDashboard(); // Refresh pending count
+            } else {
+                showToast('Failed to update alert', 'error');
+            }
+        }
+
+        // ML Insights
+        async function loadMLInsights() {
+            const [status, features, drift, stats] = await Promise.all([
+                apiGet('ml/status'),
+                apiGet('ml/features'),
+                apiGet('ml/monitoring/drift'),
+                apiGet('ml/monitoring/stats?hours=24')
+            ]);
+
+            if (status) {
+                document.getElementById('ml-model-info').innerHTML = `
+                    <div class="flex justify-between py-2 border-b border-gray-100">
+                        <span class="text-gray-500">Status</span>
+                        <span class="text-green-500 font-medium">● Active</span>
+                    </div>
+                    <div class="flex justify-between py-2 border-b border-gray-100">
+                        <span class="text-gray-500">Version</span>
+                        <span class="font-medium">${status.version || 'N/A'}</span>
+                    </div>
+                    <div class="flex justify-between py-2 border-b border-gray-100">
+                        <span class="text-gray-500">Primary Model</span>
+                        <span class="font-medium">${status.primary_model || 'N/A'}</span>
+                    </div>
+                    <div class="flex justify-between py-2 border-b border-gray-100">
+                        <span class="text-gray-500">Features</span>
+                        <span class="font-medium">${status.feature_count || 0}</span>
+                    </div>
+                    <div class="flex justify-between py-2">
+                        <span class="text-gray-500">Trained At</span>
+                        <span class="font-medium">${(status.trained_at || '').substring(0, 16)}</span>
+                    </div>
+                `;
+            }
+
+            if (drift) {
+                document.getElementById('ml-drift-info').innerHTML = `
+                    <div class="flex justify-between py-2 border-b border-gray-100">
+                        <span class="text-gray-500">Status</span>
+                        <span class="${drift.drift_detected ? 'text-red-500' : 'text-green-500'} font-medium">
+                            ${drift.drift_detected ? '⚠️ Drift Detected' : '✓ Stable'}
+                        </span>
+                    </div>
+                    <div class="flex justify-between py-2 border-b border-gray-100">
+                        <span class="text-gray-500">Score Drift</span>
+                        <span class="font-medium">${drift.score_drift_pct || 0}%</span>
+                    </div>
+                    <div class="flex justify-between py-2">
+                        <span class="text-gray-500">Recommendation</span>
+                        <span class="font-medium">${drift.recommendation || 'N/A'}</span>
+                    </div>
+                `;
+            }
+
+            if (features && features.features) {
+                const sorted = features.features.sort((a, b) => b.importance - a.importance).slice(0, 10);
+                const ctx = document.getElementById('chart-features');
+                if (charts.features) charts.features.destroy();
+
+                charts.features = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: sorted.map(f => f.name),
+                        datasets: [{
+                            data: sorted.map(f => (f.importance * 100).toFixed(1)),
+                            backgroundColor: '#6366f1',
+                            borderRadius: 4
+                        }]
+                    },
+                    options: {
+                        indexAxis: 'y',
+                        responsive: true,
+                        plugins: { legend: { display: false } },
+                        scales: { x: { title: { display: true, text: 'Importance %' } } }
+                    }
+                });
+            }
+
+            if (stats) {
+                document.getElementById('ml-stat-predictions').textContent = stats.total_predictions || 0;
+                document.getElementById('ml-stat-flag-rate').textContent = ((stats.flag_rate || 0) * 100).toFixed(1) + '%';
+                document.getElementById('ml-stat-ensemble').textContent = stats.ensemble?.mean?.toFixed(1) || '-';
+                document.getElementById('ml-stat-p99').textContent = stats.ensemble?.p99?.toFixed(1) || '-';
+            }
+        }
+
+        // Test Transaction
+        function setTestTime(mode) {
+            testTimeMode = mode;
+            document.querySelectorAll('[id^="time-"]').forEach(btn => btn.classList.remove('bg-indigo-100'));
+            document.getElementById('time-' + mode).classList.add('bg-indigo-100');
+        }
+
+        async function submitTestTransaction() {
+            const amount = parseFloat(document.getElementById('test-amount').value);
+            const userId = document.getElementById('test-user').value;
+            const merchant = document.getElementById('test-merchant').value;
+            const mcc = document.getElementById('test-mcc').value;
+            const department = document.getElementById('test-department').value;
+
+            let txnDate = new Date();
+            if (testTimeMode === 'late') {
+                txnDate.setHours(3, 0, 0, 0);
+            } else if (testTimeMode === 'weekend') {
+                const daysUntilSat = (6 - txnDate.getDay() + 7) % 7 || 7;
+                txnDate.setDate(txnDate.getDate() + daysUntilSat);
+            }
+
+            const txn = {
+                id: 'test_' + Date.now(),
+                amount: amount,
+                user_id: userId,
+                merchant_name: merchant,
+                merchant_category_code: mcc,
+                department: department || undefined,
+                transaction_date: txnDate.toISOString()
+            };
+
+            document.getElementById('test-result').innerHTML = '<div class="text-center py-8"><div class="animate-spin w-8 h-8 border-4 border-indigo-500 border-t-transparent rounded-full mx-auto"></div><p class="mt-4 text-gray-500">Processing...</p></div>';
+
+            const result = await apiPost('transactions', txn);
+
+            if (result && !result.error) {
+                const decisionColor = result.decision === 'BLOCKED' ? 'red' : result.decision === 'FLAGGED' ? 'yellow' : 'green';
+                const decisionIcon = result.decision === 'BLOCKED' ? '🚫' : result.decision === 'FLAGGED' ? '⚠️' : '✅';
+
+                let factorsHtml = '';
+                if (result.factors && result.factors.length > 0) {
+                    factorsHtml = `
+                        <h4 class="font-medium text-gray-700 mt-4 mb-2">Risk Factors</h4>
+                        <div class="space-y-2">
+                            ${result.factors.map(f => `
+                                <div class="flex items-center justify-between py-2 px-3 bg-gray-50 rounded-lg">
+                                    <span class="text-sm text-gray-600">${f.signal}</span>
+                                    <span class="text-sm font-medium ${f.score >= 70 ? 'text-red-500' : f.score >= 40 ? 'text-yellow-500' : 'text-green-500'}">${f.score.toFixed(0)}</span>
+                                </div>
+                            `).join('')}
+                        </div>
+                    `;
+                }
+
+                document.getElementById('test-result').innerHTML = `
+                    <div class="text-center mb-6">
+                        <span class="text-6xl">${decisionIcon}</span>
+                        <h3 class="text-2xl font-bold text-${decisionColor}-500 mt-2">${result.decision}</h3>
+                    </div>
+
+                    <div class="grid grid-cols-3 gap-4 mb-4">
+                        <div class="bg-gray-50 rounded-lg p-3 text-center">
+                            <div class="text-gray-500 text-xs">Risk Score</div>
+                            <div class="text-xl font-bold">${result.risk_score?.toFixed(1) || 0}</div>
+                        </div>
+                        <div class="bg-gray-50 rounded-lg p-3 text-center">
+                            <div class="text-gray-500 text-xs">Processing</div>
+                            <div class="text-xl font-bold">${result.processed_in_ms}ms</div>
+                        </div>
+                        <div class="bg-gray-50 rounded-lg p-3 text-center">
+                            <div class="text-gray-500 text-xs">Alerts</div>
+                            <div class="text-xl font-bold">${result.alerts_created}</div>
+                        </div>
+                    </div>
+
+                    ${factorsHtml}
+
+                    ${result.reasons && result.reasons.length > 0 ? `
+                        <h4 class="font-medium text-gray-700 mt-4 mb-2">Reasons</h4>
+                        <ul class="text-sm text-gray-600 space-y-1">
+                            ${result.reasons.map(r => `<li>• ${r}</li>`).join('')}
+                        </ul>
+                    ` : ''}
+                `;
+
+                showToast('Transaction processed successfully');
+            } else {
+                document.getElementById('test-result').innerHTML = `
+                    <div class="text-center text-red-500">
+                        <span class="text-4xl">❌</span>
+                        <p class="mt-2">Error: ${result?.error || 'Unknown error'}</p>
+                    </div>
+                `;
+                showToast('Transaction failed', 'error');
+            }
+        }
+
+        // Receipt OCR
+        async function checkOCRStatus() {
+            const status = await apiGet('receipts/ocr/status');
+            const el = document.getElementById('ocr-status');
+
+            if (status && status.available) {
+                el.innerHTML = '<span class="text-green-500">✓</span> OCR System Ready';
+                el.className = 'mb-4 p-3 rounded-lg bg-green-50 text-sm text-green-700';
+            } else {
+                el.innerHTML = '<span class="text-red-500">✗</span> OCR Not Available - Install Tesseract';
+                el.className = 'mb-4 p-3 rounded-lg bg-red-50 text-sm text-red-700';
+            }
+        }
+
+        async function verifyReceipt() {
+            const fileInput = document.getElementById('receipt-file');
+            const amount = parseFloat(document.getElementById('receipt-amount').value);
+            const merchant = document.getElementById('receipt-merchant').value;
+
+            if (!fileInput.files[0]) {
+                showToast('Please select a receipt image', 'error');
+                return;
+            }
+
+            if (!amount) {
+                showToast('Please enter the claimed amount', 'error');
+                return;
+            }
+
+            document.getElementById('receipt-result').innerHTML = '<div class="text-center py-8"><div class="animate-spin w-8 h-8 border-4 border-indigo-500 border-t-transparent rounded-full mx-auto"></div><p class="mt-4 text-gray-500">Processing receipt...</p></div>';
+
+            const formData = new FormData();
+            formData.append('receipt', fileInput.files[0]);
+            formData.append('amount', amount);
+            if (merchant) formData.append('merchant', merchant);
+
+            try {
+                const response = await fetch(`${API_BASE}/receipts/verify`, {
+                    method: 'POST',
+                    body: formData
+                });
+                const result = await response.json();
+
+                const verified = result.verified;
+                const details = result.details || {};
+                const extracted = details.extracted || {};
+
+                document.getElementById('receipt-result').innerHTML = `
+                    <div class="text-center mb-6">
+                        <span class="text-6xl">${verified ? '✅' : '❌'}</span>
+                        <h3 class="text-2xl font-bold ${verified ? 'text-green-500' : 'text-red-500'} mt-2">
+                            ${verified ? 'Verified' : 'Verification Failed'}
+                        </h3>
+                    </div>
+
+                    <div class="space-y-4">
+                        <div class="bg-gray-50 rounded-lg p-4">
+                            <h4 class="font-medium text-gray-700 mb-2">Extracted Data</h4>
+                            <div class="grid grid-cols-2 gap-2 text-sm">
+                                <div class="text-gray-500">Total:</div>
+                                <div class="font-medium">$${extracted.total?.toFixed(2) || 'N/A'}</div>
+                                <div class="text-gray-500">Merchant:</div>
+                                <div class="font-medium">${extracted.merchant || 'N/A'}</div>
+                                <div class="text-gray-500">Date:</div>
+                                <div class="font-medium">${extracted.date || 'N/A'}</div>
+                                <div class="text-gray-500">Confidence:</div>
+                                <div class="font-medium">${((extracted.confidence || 0) * 100).toFixed(0)}%</div>
+                            </div>
+                        </div>
+
+                        ${details.issues && details.issues.length > 0 ? `
+                            <div class="bg-red-50 rounded-lg p-4">
+                                <h4 class="font-medium text-red-700 mb-2">Issues Found</h4>
+                                <ul class="text-sm text-red-600 space-y-1">
+                                    ${details.issues.map(i => `<li>• ${i.message || i}</li>`).join('')}
+                                </ul>
+                            </div>
+                        ` : ''}
+                    </div>
+                `;
+
+                showToast(verified ? 'Receipt verified!' : 'Verification failed', verified ? 'success' : 'error');
+            } catch (e) {
+                document.getElementById('receipt-result').innerHTML = `
+                    <div class="text-center text-red-500">
+                        <span class="text-4xl">❌</span>
+                        <p class="mt-2">Error: ${e.message}</p>
+                    </div>
+                `;
+            }
+        }
+
+        // Refresh all data
+        async function refreshAllData() {
+            showToast('Refreshing data...');
+            await loadDashboard();
+            showToast('Data refreshed!');
+        }
+
+        // Global search
+        document.getElementById('global-search').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                const query = this.value.trim();
+                if (query) {
+                    document.getElementById('filter-user').value = query;
+                    showPage('transactions');
+                    loadTransactions();
+                }
+            }
+        });
+
+        // Initialize
+        loadDashboard();
+        setTestTime('now');
+    </script>
+</body>
+</html>

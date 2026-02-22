@@ -1,0 +1,52 @@
+{
+  "version": "20260218_235745",
+  "timestamp": "2026-02-18T23:57:45.265409",
+  "feature_columns": [
+    "amount",
+    "amount_log",
+    "hour",
+    "day_of_week",
+    "is_weekend",
+    "is_late_night",
+    "is_round_number",
+    "user_txn_count",
+    "user_avg_amount",
+    "user_std_amount",
+    "amount_zscore",
+    "vendor_frequency",
+    "is_new_vendor",
+    "mcc_risk_score",
+    "time_since_last"
+  ],
+  "primary_model": "xgboost",
+  "metrics": {
+    "isolation_forest": {
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0
+    },
+    "xgboost": {
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "auc_roc": 0.0
+    }
+  },
+  "feature_importance": {
+    "amount": 0.5324943661689758,
+    "amount_log": 0.0,
+    "hour": 0.00821565929800272,
+    "day_of_week": 0.0,
+    "is_weekend": 0.0,
+    "is_late_night": 0.009839450940489769,
+    "is_round_number": 0.0,
+    "user_txn_count": 0.005290389992296696,
+    "user_avg_amount": 0.003876443486660719,
+    "user_std_amount": 0.0,
+    "amount_zscore": 0.03245173394680023,
+    "vendor_frequency": 0.0017105968436226249,
+    "is_new_vendor": 0.03494536876678467,
+    "mcc_risk_score": 0.21606838703155518,
+    "time_since_last": 0.15510764718055725
+  }
+}
