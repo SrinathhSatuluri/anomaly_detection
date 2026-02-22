@@ -28,4 +28,4 @@ joblib==1.5.3
 # Testing
 pytest==7.4.3
 psycopg2-binary==2.9.9
-pillow==10.1.0
+pillow>=10.2.0
