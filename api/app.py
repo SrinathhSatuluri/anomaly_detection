@@ -8,6 +8,7 @@ from flask_cors import CORS
 from api.config import Config
 from api.routes.webhooks import webhooks_bp
 from api.routes.alerts import alerts_bp
+from api.routes.investigation import investigation_bp
 
 
 def create_app():
@@ -20,6 +21,7 @@ def create_app():
     # Register blueprints
     app.register_blueprint(webhooks_bp, url_prefix="/api/webhooks")
     app.register_blueprint(alerts_bp, url_prefix="/api/alerts")
+    app.register_blueprint(investigation_bp, url_prefix="/api")
 
     # Train ML models from existing data on startup
     with app.app_context():
