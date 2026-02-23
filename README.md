@@ -2,6 +2,41 @@
 
 A real-time fraud detection system for corporate expense management, inspired by Ramp's transaction monitoring architecture. The system implements a three-layer detection pipeline combining rule-based filters, weighted risk scoring, and machine learning ensemble models.
 
+**Live Demo:** [Dashboard](https://vocal-fenglisu-61e36a.netlify.app) | **API:** [Health Check](https://fraud-detection-api-as51.onrender.com/health)
+
+## Model Performance
+
+Trained on the [Kaggle Credit Card Fraud Detection](https://www.kaggle.com/datasets/mlg-ulb/creditcardfraud) dataset: 284,807 transactions with 492 fraud cases (0.17% fraud rate).
+
+| Metric | Isolation Forest | XGBoost | Description |
+|--------|-----------------|---------|-------------|
+| **ROC AUC** | 0.946 | **0.966** | Area under ROC curve |
+| **Precision** | 0.243 | **0.771** | Of predicted fraud, % actually fraud |
+| **Recall** | 0.265 | **0.827** | Of actual fraud, % caught |
+| **F1 Score** | 0.254 | **0.798** | Harmonic mean of precision/recall |
+| **PR AUC** | 0.127 | **0.861** | Area under Precision-Recall curve |
+| **False Positive Rate** | 0.14% | **0.04%** | Legitimate transactions incorrectly flagged |
+
+### Confusion Matrix (XGBoost on Test Set)
+
+```
+                      Predicted
+                   Legit    Fraud
+Actual Legit      56,840      24     (99.96% correctly approved)
+Actual Fraud          17      81     (82.7% fraud detection rate)
+```
+
+**Key Results:**
+- Catches **81 of 98 frauds** (82.7% recall)
+- Only **24 false alarms** out of 56,864 legitimate transactions
+- **0.04% false positive rate** - minimal customer friction
+
+### ROC Curve
+
+![ROC Curves](ml/metrics/roc_curves.png)
+
+---
+
 ## Table of Contents
 
 - [System Architecture](#system-architecture)
@@ -116,11 +151,13 @@ The ensemble combines two complementary approaches:
 1. **Isolation Forest** (Unsupervised)
    - Detects anomalies without requiring labeled fraud data
    - Effective for identifying novel fraud patterns
+   - ROC AUC: 0.946
    - Weight in ensemble: 0.4
 
 2. **XGBoost Classifier** (Supervised)
    - Learns from historically flagged transactions
    - Better precision on known fraud patterns
+   - ROC AUC: 0.966, Precision: 77.1%, Recall: 82.7%
    - Weight in ensemble: 0.6
 
 Final ensemble score: `0.4 * IF_score + 0.6 * XGB_score`
@@ -131,32 +168,38 @@ Implementation: `ml/ensemble_detector.py`
 
 ## Machine Learning Infrastructure
 
+### Training Data
+
+Models are trained on the [Kaggle Credit Card Fraud Detection](https://www.kaggle.com/datasets/mlg-ulb/creditcardfraud) dataset:
+
+| Statistic | Value |
+|-----------|-------|
+| Total Transactions | 284,807 |
+| Fraud Cases | 492 |
+| Fraud Rate | 0.173% |
+| Training Set | 227,845 (394 frauds) |
+| Test Set | 56,962 (98 frauds) |
+
 ### Feature Engineering
 
-The system extracts 30 features from each transaction:
+The system extracts 33 features from each transaction:
 
-**Temporal Features (5)**
-- hour, day_of_week, is_weekend, is_late_night, hour_bucket
+**PCA Features (28)**
+- V1-V28: Principal components from original transaction features (anonymized)
 
-**Amount Features (7)**
-- amount, amount_log, is_round_number, amount_zscore
-- amount_vs_max_ratio, amount_vs_median_ratio, amount_user_percentile
+**Engineered Features (5)**
+- Amount_scaled: Standardized transaction amount
+- Amount_log: Log-transformed amount
+- Hour: Hour of day (0-23)
+- Is_night: Late night transaction flag (10pm-6am)
+- Is_round: Round number detection
 
-**User Behavioral Features (8)**
-- user_txn_count, user_avg_amount, user_std_amount
-- account_age_days, vendor_diversity, txn_rank_in_day
-- same_vendor_today, is_rapid_succession
-
-**Vendor Features (3)**
-- vendor_frequency, is_new_vendor, is_high_value
-
-**Category Features (4)**
-- mcc_risk_score, is_travel, is_entertainment, category_first_time
-
-**Time Delta Features (3)**
-- time_since_last, time_since_last_log, is_first_of_month, is_end_of_quarter
-
-Implementation: `scripts/train_models.py`
+**Top Features by Importance (XGBoost):**
+1. V14 (51.8%) - Primary fraud indicator
+2. V4 (5.9%)
+3. V12 (4.3%)
+4. V8 (2.6%)
+5. Amount_scaled (2.0%)
 
 ### Model Versioning
 
@@ -164,19 +207,14 @@ Models are stored with timestamp-based versioning:
 
 ```
 ml/models/
-├── isolation_forest_20260220_005134.joblib
-├── xgboost_20260220_005134.joblib
-├── metadata_20260220_005134.json
-├── isolation_forest_latest.joblib -> (symlink)
-├── xgboost_latest.joblib -> (symlink)
-└── metadata_latest.json -> (symlink)
+├── isolation_forest_20260223_113442.joblib
+├── xgboost_20260223_113442.joblib
+├── metadata_20260223_113442.json
+├── scaler_20260223_113442.joblib
+├── isolation_forest_latest.joblib
+├── xgboost_latest.joblib
+└── metadata_latest.json
 ```
-
-Metadata includes:
-- Training timestamp
-- Feature columns (ordered)
-- Model performance metrics (precision, recall, F1, AUC-ROC)
-- Feature importance rankings
 
 ### Model Monitoring
 
@@ -259,13 +297,13 @@ Response:
 ```json
 {
   "model_loaded": true,
-  "version": "20260220_005134",
-  "trained_at": "2026-02-20T00:51:34.114338",
-  "primary_model": "isolation_forest",
-  "feature_count": 30,
+  "version": "20260223_113442",
+  "trained_at": "2026-02-23T11:34:42",
+  "primary_model": "xgboost",
+  "feature_count": 33,
   "metrics": {
-    "isolation_forest": {"precision": 1.0, "recall": 0.333, "f1": 0.5},
-    "xgboost": {"precision": 0.5, "recall": 0.333, "f1": 0.4, "auc_roc": 0.958}
+    "isolation_forest": {"precision": 0.243, "recall": 0.265, "f1": 0.254, "roc_auc": 0.946},
+    "xgboost": {"precision": 0.771, "recall": 0.827, "f1": 0.798, "roc_auc": 0.966}
   }
 }
 ```
@@ -412,8 +450,8 @@ docker-compose up -d
 # Initialize database
 python -m scripts.init_db
 
-# Train ML models
-python -m scripts.train_models
+# Train ML models (optional - uses Kaggle dataset)
+python -m scripts.train_kaggle_model
 
 # Start API server
 python -m api.app
@@ -424,6 +462,13 @@ python -m api.app
 ```bash
 pytest tests/ -v
 ```
+
+60 tests covering:
+- Instant rules (hard blocks)
+- Risk scoring signals
+- ML ensemble predictions
+- API endpoints
+- Model monitoring
 
 ### Generating Mock Data
 
@@ -464,19 +509,19 @@ DUPLICATE_WINDOW_MINUTES = 10
 
 ### ML Model Parameters
 
-Training parameters in `scripts/train_models.py`:
+Training parameters in `scripts/train_kaggle_model.py`:
 
 ```python
 # Isolation Forest
-contamination = 0.1
+contamination = 0.00172  # Matches dataset fraud rate
 n_estimators = 100
 random_state = 42
 
 # XGBoost
 n_estimators = 100
-max_depth = 5
+max_depth = 6
 learning_rate = 0.1
-scale_pos_weight = (calculated from class imbalance)
+scale_pos_weight = 577.3  # Handles class imbalance
 ```
 
 ---
@@ -504,15 +549,18 @@ anomaly-detection/
 │   ├── ensemble_detector.py   # Layer 3: ML ensemble
 │   ├── monitoring.py          # Model monitoring
 │   ├── models/                # Trained model artifacts
+│   ├── metrics/               # Performance visualizations
 │   └── flows/                 # Training pipelines
 ├── scripts/
 │   ├── init_db.py             # Database initialization
 │   ├── train_models.py        # Model training pipeline
+│   ├── train_kaggle_model.py  # Kaggle dataset training
 │   ├── mock_data.py           # Test data generation
 │   └── scheduled_retrain.py   # Automated retraining
 ├── dashboard/
 │   └── index.html             # Frontend application
-├── tests/                     # Test suite
+├── tests/                     # Test suite (60 tests)
+├── data/                      # Training datasets
 ├── requirements.txt           # Python dependencies
 ├── docker-compose.yml         # Local development services
 ├── wsgi.py                    # WSGI entry point
@@ -530,8 +578,9 @@ anomaly-detection/
 | P99 response time | < 500ms |
 | Model inference time | < 50ms |
 | Throughput (estimated) | 50-100 req/sec |
+| Test coverage | 60 tests passing |
 
-Note: Performance measured on Render free tier. Production deployment would show improved latency and throughput.
+Note: Performance measured on Render free tier. First request may take 30-50s if service is idle.
 
 ---
 
@@ -540,8 +589,7 @@ Note: Performance measured on Render free tier. Production deployment would show
 **Current Limitations:**
 - Single-region deployment (no geographic redundancy)
 - Synchronous processing (no async queue for heavy analysis)
-- Limited historical data for model training
-- No A/B testing infrastructure for model comparison
+- Free tier hosting (cold starts after 15 min idle)
 
 **Potential Enhancements:**
 - Integration with card network risk scores (Visa, Mastercard)
@@ -555,7 +603,7 @@ Note: Performance measured on Render free tier. Production deployment would show
 ## References
 
 - [Ramp Engineering Blog: Production ML with Metaflow](https://builders.ramp.com/post/metaflow-production-ml)
-- [Ramp 2025 Release Notes](https://ramp.com/blog/2025-release-notes)
+- [Kaggle Credit Card Fraud Detection Dataset](https://www.kaggle.com/datasets/mlg-ulb/creditcardfraud)
 - [scikit-learn Isolation Forest](https://scikit-learn.org/stable/modules/generated/sklearn.ensemble.IsolationForest.html)
 - [XGBoost Documentation](https://xgboost.readthedocs.io/)
 
@@ -568,3 +616,4 @@ MIT License - See LICENSE file for details.
 ## Author
 
 Srinath Satuluri - [GitHub](https://github.com/SrinathhSatuluri)
+
